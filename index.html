@@ -62,6 +62,8 @@
         .badge.approved { background: #d1fae5; color: #065f46; }
         .badge.rejected { background: #fee2e2; color: #991b1b; }
 
+        .category-tag { background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; display: inline-block; }
+
         .action-btns { display: flex; gap: 6px; align-items: center; }
         .btn-action { background: #f1f5f9; border: 1px solid #e2e8f0; padding: 4px 10px; border-radius: 4px; font-size: 12px; color: #475569; cursor: pointer; display: flex; align-items: center; gap: 4px; text-decoration: none; }
         .btn-action:hover { background: #e2e8f0; }
@@ -92,6 +94,11 @@
         .btn-add-item { background: #10b981; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; margin-top: 10px; }
         .btn-remove-item { background: #ef4444; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; }
         
+        /* Modal Grand Total Summary Box */
+        .modal-grand-total { display: flex; justify-content: flex-end; align-items: center; gap: 15px; background: #f1f5f9; padding: 12px 16px; border-radius: 8px; border: 1px solid #cbd5e1; margin-top: 15px; }
+        .modal-grand-total span { font-size: 14px; font-weight: 600; color: #475569; }
+        .modal-grand-total-value { font-size: 20px; font-weight: 700; color: #0f172a; }
+
         .section-title { font-size: 15px; font-weight: 700; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-top: 20px; margin-bottom: 10px; }
         .btn-submit-modal { background: #0f172a; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px; }
         .inline-add { display: flex; gap: 6px; }
@@ -226,19 +233,20 @@
                     <table id="requestTable">
                         <thead>
                             <tr>
-                                <th style="font-size: 10px; padding: 8px 10px; width: 90px;">PR NO.</th>
+                                <th style="font-size: 10px; padding: 8px 10px; width: 85px;">PR NO.</th>
                                 <th style="font-size: 10px; padding: 8px 10px;">STORE</th>
                                 <th style="font-size: 10px; padding: 8px 10px;">SUPPLIER</th>
+                                <th style="font-size: 10px; padding: 8px 10px;">ประเภทค่าใช้จ่าย</th>
                                 <th style="font-size: 10px; padding: 8px 10px;">PROJECT NAME</th>
                                 <th style="font-size: 10px; padding: 8px 10px;">VOL</th>
-                                <th style="font-size: 10px; padding: 8px 10px;">PRICE/UNIT</th>
+                                <th style="display: none; font-size: 10px; padding: 8px 10px;">PRICE/UNIT</th>
                                 <th style="font-size: 10px; padding: 8px 10px;">TOTAL</th>
                                 <th style="font-size: 10px; padding: 8px 10px;">สถานะ (คลิกเปลี่ยน)</th>
                                 <th style="font-size: 10px; padding: 8px 10px;">ACTIONS</th>
                             </tr>
                         </thead>
                         <tbody id="tableBody">
-                            <tr><td colspan="9" style="text-align: center; color: #94a3b8;">กำลังโหลดข้อมูล...</td></tr>
+                            <tr><td colspan="10" style="text-align: center; color: #94a3b8;">กำลังโหลดข้อมูล...</td></tr>
                         </tbody>
                         <tfoot>
                             <tr class="total-row">
@@ -516,6 +524,12 @@
             </div>
             <button class="btn-add-item" onclick="addItem()">+ เพิ่มรายการ</button>
 
+            <!-- Modal Grand Total Summary -->
+            <div class="modal-grand-total">
+                <span>Total Amount:</span>
+                <div class="modal-grand-total-value" id="modalGrandTotal">฿0.00</div>
+            </div>
+
             <div class="section-title">แนบใบเสนอราคา (Quotation)</div>
             <div class="upload-grid">
                 <div class="upload-box">
@@ -638,6 +652,7 @@
                     </div>
                 `;
             }
+            updateModalGrandTotal();
         }
 
         function closeModal() { document.getElementById('requestModal').style.display = 'none'; }
@@ -807,7 +822,7 @@
                     <td style="text-align: right;">
                         <div class="action-btns" style="justify-content: flex-end;">
                             <button class="btn-action" onclick="editStore(${index})">✏️ แก้ไข</button>
-                            <button class="btn-action delete" onclick="deleteStore(${index})">Delete</button>
+                            <button class="btn-action delete" onclick="deleteStore(${index})" title="ลบ Store">🗑️</button>
                         </div>
                     </td>
                 `;
@@ -854,6 +869,17 @@
             const vol = parseFloat(row.querySelector('.vol').value) || 0;
             const price = parseFloat(row.querySelector('.price').value) || 0;
             row.querySelector('.total').value = '฿' + (vol * price).toLocaleString(undefined, {minimumFractionDigits: 2});
+            updateModalGrandTotal();
+        }
+
+        function updateModalGrandTotal() {
+            let sum = 0;
+            document.querySelectorAll('.items-row').forEach(row => {
+                const vol = parseFloat(row.querySelector('.vol').value) || 0;
+                const price = parseFloat(row.querySelector('.price').value) || 0;
+                sum += (vol * price);
+            });
+            document.getElementById('modalGrandTotal').innerText = '฿' + sum.toLocaleString(undefined, {minimumFractionDigits: 2});
         }
 
         function addItem(desc = '', vol = 1, price = 0) {
@@ -868,9 +894,13 @@
                 <button class="btn-remove-item" onclick="removeItem(this)">ลบ</button>
             `;
             container.appendChild(div);
+            updateModalGrandTotal();
         }
 
-        function removeItem(btn) { btn.closest('.items-row').remove(); }
+        function removeItem(btn) { 
+            btn.closest('.items-row').remove(); 
+            updateModalGrandTotal();
+        }
 
         function fetchRequests() {
             db.collection("project_requests").orderBy("createdAt", "desc").onSnapshot((snapshot) => {
@@ -895,7 +925,7 @@
             let grandTotal = 0;
 
             if (data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #94a3b8;">ยังไม่มีข้อมูลใบขอซื้อ</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: #94a3b8;">ยังไม่มีข้อมูลใบขอซื้อ</td></tr>`;
                 document.getElementById('totalAmountCell').innerText = '฿0.00';
                 document.getElementById('tableCountText').innerText = '0 shown of 0 total';
                 return;
@@ -933,22 +963,24 @@
                     grandTotal += req.reqTotalSum;
 
                     const projectNameText = (req.projectName && req.projectName.trim() !== "") ? req.projectName : '-';
+                    const categoryText = (req.codeName && req.codeName.trim() !== "") ? req.codeName : '-';
 
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td style="font-size: 11px; padding: 10px 10px;"><strong style="font-size: 11px;">${req.prNo || '-'}</strong></td>
                         <td style="font-size: 11px; padding: 10px 10px;">${req.store || '-'}</td>
                         <td style="font-size: 11px; padding: 10px 10px;">${req.supplier || '-'}</td>
+                        <td style="font-size: 11px; padding: 10px 10px;"><span class="category-tag">${categoryText}</span></td>
                         <td style="font-size: 11px; padding: 10px 10px;"><strong>${projectNameText}</strong></td>
                         <td style="font-size: 11px; padding: 10px 10px;">${req.totalVol}</td>
-                        <td style="font-size: 11px; padding: 10px 10px;">-</td>
+                        <td style="display: none; font-size: 11px; padding: 10px 10px;">-</td>
                         <td style="font-size: 11px; padding: 10px 10px;"><strong>฿${req.reqTotalSum.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong></td>
                         <td style="font-size: 11px; padding: 10px 10px;"><button class="badge ${badgeClass}" onclick="toggleStatus('${req.id}', '${status}')" title="คลิกเพื่อเปลี่ยนสถานะ">${status}</button></td>
                         <td style="font-size: 11px; padding: 10px 10px;">
                             <div class="action-btns">
                                 <button class="btn-action print-row" onclick="printSingleReport('${req.id}')" title="พิมพ์ใบขออนุมัติ">🖨️</button>
                                 <button class="btn-action" onclick="editRequest('${req.id}')" title="แก้ไขรายการ">✏️</button>
-                                <button class="btn-action delete" onclick="deleteRequest('${req.id}')" title="ลบรายการ">Delete</button>
+                                <button class="btn-action delete" onclick="deleteRequest('${req.id}')" title="ลบรายการ">🗑️</button>
                             </div>
                         </td>
                     `;
@@ -1148,6 +1180,7 @@
             } else {
                 addItem();
             }
+            updateModalGrandTotal();
         }
 
         async function toggleStatus(id, currentStatus) {
