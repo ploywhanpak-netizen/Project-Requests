@@ -54,7 +54,7 @@
 
         table { width: 100%; border-collapse: collapse; text-align: left; }
         th { background: #ffffff; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; padding: 12px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 600; }
-        td { padding: 14px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; vertical-align: middle; }
+        td { padding: 14px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; vertical-align: middle; white-space: nowrap; }
         tr:hover td { background-color: #f8fafc; }
 
         .badge { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-block; cursor: pointer; border: none; }
@@ -226,24 +226,23 @@
                     <table id="requestTable">
                         <thead>
                             <tr>
-                                <th>PR NO.</th>
-                                <th>STORE</th>
-                                <th>SUPPLIER</th>
-                                <th>PROJECT NAME</th>
-                                <th>CODE NAME</th>
-                                <th>VOL</th>
-                                <th>PRICE/UNIT</th>
-                                <th>TOTAL</th>
-                                <th>สถานะ (คลิกเปลี่ยน)</th>
-                                <th>ACTIONS</th>
+                                <th style="font-size: 10px; padding: 8px 10px; width: 90px;">PR NO.</th>
+                                <th style="font-size: 10px; padding: 8px 10px;">STORE</th>
+                                <th style="font-size: 10px; padding: 8px 10px;">SUPPLIER</th>
+                                <th style="font-size: 10px; padding: 8px 10px;">PROJECT NAME</th>
+                                <th style="font-size: 10px; padding: 8px 10px;">VOL</th>
+                                <th style="font-size: 10px; padding: 8px 10px;">PRICE/UNIT</th>
+                                <th style="font-size: 10px; padding: 8px 10px;">TOTAL</th>
+                                <th style="font-size: 10px; padding: 8px 10px;">สถานะ (คลิกเปลี่ยน)</th>
+                                <th style="font-size: 10px; padding: 8px 10px;">ACTIONS</th>
                             </tr>
                         </thead>
                         <tbody id="tableBody">
-                            <tr><td colspan="10" style="text-align: center; color: #94a3b8;">กำลังโหลดข้อมูล...</td></tr>
+                            <tr><td colspan="9" style="text-align: center; color: #94a3b8;">กำลังโหลดข้อมูล...</td></tr>
                         </tbody>
                         <tfoot>
                             <tr class="total-row">
-                                <td colspan="7" style="text-align: right;">Total</td>
+                                <td colspan="6" style="text-align: right;">Total</td>
                                 <td colspan="3" id="totalAmountCell">฿0.00</td>
                             </tr>
                         </tfoot>
@@ -327,15 +326,15 @@
                     </table>
                 </div>
 
-                <!-- Table 2: Breakdown by Expense Category / Code Name -->
+                <!-- Table 2: Breakdown by Expense Category -->
                 <div class="table-card">
                     <div class="table-header-info">
-                        🏷️ สรุปยอดใช้จ่ายแยกตาม "ประเภทการใช้จ่าย / Code Name" (By Expense Category)
+                        🏷️ สรุปยอดใช้จ่ายแยกตามประเภทการใช้จ่าย (By Expense Category)
                     </div>
                     <table>
                         <thead>
                             <tr>
-                                <th>ประเภทการใช้จ่าย (Code Name)</th>
+                                <th>ประเภทการใช้จ่าย</th>
                                 <th style="text-align: right;">จำนวนรายการ</th>
                                 <th style="text-align: right;">ยอดรวมสุทธิ (บาท)</th>
                                 <th style="text-align: right;">สัดส่วน (%)</th>
@@ -411,16 +410,15 @@
                 <tr>
                     <th class="center" style="width: 35px;">No.</th>
                     <th>Description</th>
-                    <th style="width: 110px;">Code Name</th>
-                    <th class="num" style="width: 50px;">Volume</th>
-                    <th class="num" style="width: 85px;">Price / Unit</th>
-                    <th class="num" style="width: 90px;">Total</th>
+                    <th class="num" style="width: 60px;">Volume</th>
+                    <th class="num" style="width: 100px;">Price / Unit</th>
+                    <th class="num" style="width: 100px;">Total</th>
                 </tr>
             </thead>
             <tbody id="printTableBody"></tbody>
             <tfoot>
                 <tr>
-                    <td colspan="5" style="text-align: right; font-weight: bold;">Total</td>
+                    <td colspan="4" style="text-align: right; font-weight: bold;">Total</td>
                     <td class="num" id="printGrandTotal" style="font-weight: bold;">฿0.00</td>
                 </tr>
             </tfoot>
@@ -470,8 +468,8 @@
                         <button type="button" class="btn-inline" onclick="addNewDepartment()">+ เพิ่มแผนก</button>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>ประเภทค่าใช้จ่าย (Code Name)</label>
+                <div class="form-group" style="display:none;">
+                    <label>ประเภทค่าใช้จ่าย</label>
                     <div class="inline-add">
                         <select id="modalCodeName" style="flex: 1;"></select>
                         <button type="button" class="btn-inline" onclick="addNewCategory()">+ เพิ่มประเภท</button>
@@ -621,6 +619,7 @@
                 document.getElementById('modalSupplier').value = '';
                 document.getElementById('modalStore').value = stores[0] || 'Bloom';
                 document.getElementById('modalDepartment').value = departments[0];
+                document.getElementById('modalCodeName').value = expenseCategories[0] || '';
                 document.getElementById('modalRequestedBy').value = 'Tienthong Riencharoen';
                 document.getElementById('modalRequestDate').value = getTodayDateString();
                 document.getElementById('modalDuration').value = 'Jul-2026';
@@ -692,6 +691,7 @@
                 catSelect.appendChild(opt);
             });
             if (expenseCategories.includes(currentCat)) catSelect.value = currentCat;
+            else if (expenseCategories.length > 0) catSelect.value = expenseCategories[0];
 
             const deptSelect = document.getElementById('modalDepartment');
             const currentDept = deptSelect.value;
@@ -895,7 +895,7 @@
             let grandTotal = 0;
 
             if (data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: #94a3b8;">ยังไม่มีข้อมูลใบขอซื้อ</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #94a3b8;">ยังไม่มีข้อมูลใบขอซื้อ</td></tr>`;
                 document.getElementById('totalAmountCell').innerText = '฿0.00';
                 document.getElementById('tableCountText').innerText = '0 shown of 0 total';
                 return;
@@ -920,16 +920,15 @@
 
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td><strong>${req.prNo || '-'}</strong></td>
-                        <td>${req.store || '-'}</td>
-                        <td>${req.supplier || '-'}</td>
-                        <td><strong>${projectNameText}</strong></td>
-                        <td>${req.codeName || '-'}</td>
-                        <td>${totalVol}</td>
-                        <td>-</td>
-                        <td><strong>฿${reqTotalSum.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong></td>
-                        <td><button class="badge ${badgeClass}" onclick="toggleStatus('${req.id}', '${status}')" title="คลิกเพื่อเปลี่ยนสถานะ">${status}</button></td>
-                        <td>
+                        <td style="font-size: 11px; padding: 10px 10px;"><strong style="font-size: 11px;">${req.prNo || '-'}</strong></td>
+                        <td style="font-size: 11px; padding: 10px 10px;">${req.store || '-'}</td>
+                        <td style="font-size: 11px; padding: 10px 10px;">${req.supplier || '-'}</td>
+                        <td style="font-size: 11px; padding: 10px 10px;"><strong>${projectNameText}</strong></td>
+                        <td style="font-size: 11px; padding: 10px 10px;">${totalVol}</td>
+                        <td style="font-size: 11px; padding: 10px 10px;">-</td>
+                        <td style="font-size: 11px; padding: 10px 10px;"><strong>฿${reqTotalSum.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong></td>
+                        <td style="font-size: 11px; padding: 10px 10px;"><button class="badge ${badgeClass}" onclick="toggleStatus('${req.id}', '${status}')" title="คลิกเพื่อเปลี่ยนสถานะ">${status}</button></td>
+                        <td style="font-size: 11px; padding: 10px 10px;">
                             <div class="action-btns">
                                 <button class="btn-action print-row" onclick="printSingleReport('${req.id}')" title="พิมพ์ใบขออนุมัติ">🖨️</button>
                                 <button class="btn-action" onclick="editRequest('${req.id}')" title="แก้ไขรายการ">✏️</button>
@@ -1093,7 +1092,6 @@
                     ptr.innerHTML = `
                         <td class="center">${idx + 1}</td>
                         <td>${item.desc || '-'}</td>
-                        <td>${req.codeName || '-'}</td>
                         <td class="num">${item.vol || 0}</td>
                         <td class="num">฿${(item.price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                         <td class="num"><strong>฿${rowTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong></td>
@@ -1118,7 +1116,7 @@
             document.getElementById('modalSupplier').value = req.supplier || '';
             document.getElementById('modalStore').value = req.store || stores[0];
             document.getElementById('modalDepartment').value = req.department || departments[0];
-            document.getElementById('modalCodeName').value = req.codeName || expenseCategories[0];
+            document.getElementById('modalCodeName').value = req.codeName || (expenseCategories[0] || '');
             document.getElementById('modalRequestedBy').value = req.requestedBy || 'Tienthong Riencharoen';
             document.getElementById('modalRequestDate').value = req.requestDate || getTodayDateString();
             document.getElementById('modalDuration').value = req.duration || 'Jul-2026';
@@ -1204,7 +1202,7 @@
                 const supplier = document.getElementById('modalSupplier').value;
                 const store = document.getElementById('modalStore').value;
                 const department = document.getElementById('modalDepartment').value;
-                const codeName = document.getElementById('modalCodeName').value;
+                const codeName = document.getElementById('modalCodeName').value || '';
                 const requestedBy = document.getElementById('modalRequestedBy').value;
                 const requestDate = document.getElementById('modalRequestDate').value;
                 const duration = document.getElementById('modalDuration').value;
@@ -1335,7 +1333,6 @@
                        (req.supplier && req.supplier.toLowerCase().includes(input)) ||
                        (req.store && req.store.toLowerCase().includes(input)) ||
                        (req.department && req.department.toLowerCase().includes(input)) ||
-                       (req.codeName && req.codeName.toLowerCase().includes(input)) ||
                        (req.requestDate && req.requestDate.toLowerCase().includes(input)) ||
                        (req.duration && req.duration.toLowerCase().includes(input)) ||
                        (req.payType && req.payType.toLowerCase().includes(input)) ||
