@@ -3,6 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <title>Projects Requests - Budget Breakdown View</title>
+    <!-- Firebase App (Core) SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <!-- Firebase Firestore SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <!-- Firebase Storage SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; color: #1e293b; margin: 0; padding: 30px; }
@@ -73,7 +80,6 @@
         .file-upload-btn { border: 1px dashed #cbd5e1; background: #f8fafc; border-radius: 6px; padding: 12px; text-align: center; cursor: pointer; font-size: 12px; font-weight: 600; color: #475569; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s; }
         .file-upload-btn:hover { border-color: #0f172a; background: #f1f5f9; color: #0f172a; }
         .file-upload-btn input { display: none; }
-        .file-name-display { font-size: 10px; color: #64748b; font-weight: normal; margin-top: 2px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     </style>
 </head>
 <body>
@@ -84,9 +90,7 @@
                 <div class="subtitle">Track purchase requests, suppliers, invoices, receipts and payment evidence.</div>
             </div>
             <div class="actions-bar">
-                <button class="btn-clear">Clear Projects Requests</button>
-                <button class="btn-csv">Import CSV</button>
-                <button class="btn-csv">Export CSV</button>
+                <button class="btn-clear" onclick="clearAllRequests()">Clear Projects Requests</button>
                 <button class="btn-add" onclick="openModal()">+ Add request</button>
             </div>
         </div>
@@ -98,39 +102,39 @@
         <div class="metrics-grid">
             <div class="metric-card">
                 <div class="metric-title">Requests</div>
-                <div class="metric-value" id="metricRequests">1</div>
+                <div class="metric-value" id="metricRequests">0</div>
                 <div class="metric-sub">Approval rows</div>
             </div>
             <div class="metric-card">
                 <div class="metric-title">Amount</div>
-                <div class="metric-value orange" id="metricAmount">฿190.00</div>
+                <div class="metric-value orange" id="metricAmount">฿0.00</div>
                 <div class="metric-sub">Total requested</div>
             </div>
             <div class="metric-card">
                 <div class="metric-title">Suppliers</div>
-                <div class="metric-value" id="metricSuppliers">1</div>
+                <div class="metric-value" id="metricSuppliers">0</div>
                 <div class="metric-sub">Unique suppliers</div>
             </div>
             <div class="metric-card">
                 <div class="metric-title">Companies</div>
-                <div class="metric-value">1</div>
+                <div class="metric-value" id="metricCompanies">0</div>
                 <div class="metric-sub">Unique companies</div>
             </div>
             <div class="metric-card">
                 <div class="metric-title">รออนุมัติ</div>
-                <div class="metric-value orange" id="metricPending">฿190.00</div>
-                <div class="metric-sub">1 requests</div>
+                <div class="metric-value orange" id="metricPending">฿0.00</div>
+                <div class="metric-sub"><span id="metricPendingCount">0</span> requests</div>
             </div>
             <div class="metric-card">
                 <div class="metric-title">ไม่อนุมัติ</div>
-                <div class="metric-value">฿0</div>
+                <div class="metric-value" id="metricRejected">฿0.00</div>
                 <div class="metric-sub">0 requests</div>
             </div>
         </div>
 
         <div class="table-card">
             <div class="table-header-info">
-                Budget Breakdown & Projects Requests <span id="tableCountText">1 shown of 1 total</span>
+                Budget Breakdown & Projects Requests <span id="tableCountText">0 shown of 0 total</span>
             </div>
             <table id="requestTable">
                 <thead>
@@ -148,30 +152,13 @@
                         <th>ACTIONS</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr>
-                        <td><strong>MK2026-021</strong></td>
-                        <td>Office</td>
-                        <td>Shopee (Littlebags.B)</td>
-                        <td>
-                            <strong>อุปกรณ์กันรอย Macbook Neo 2026</strong><br>
-                            <span style="color: #64748b; font-size: 12px; white-space: pre-line;">- เคสใส Mac Neo 2026
-- แผ่นซิลิโคนป้องกันแป้นพิมพ์
-- Film Trackpad</span>
-                        </td>
-                        <td>6030012</td>
-                        <td>อุปกรณ์สำนักงาน</td>
-                        <td>1</td>
-                        <td>฿190.00</td>
-                        <td><strong>฿190.00</strong></td>
-                        <td><span class="badge">รออนุมัติ</span></td>
-                        <td><div class="action-btns"><button class="btn-action" onclick="editRow(this)">Edit</button><button class="btn-action" onclick="deleteRow(this)">Delete</button></div></td>
-                    </tr>
+                <tbody id="tableBody">
+                    <!-- ข้อมูลจะถูกโหลดจาก Firebase อัตโนมัติ -->
                 </tbody>
                 <tfoot>
                     <tr class="total-row">
                         <td colspan="8" style="text-align: right;">Total</td>
-                        <td colspan="3" id="totalAmountCell">฿190.00</td>
+                        <td colspan="3" id="totalAmountCell">฿0.00</td>
                     </tr>
                 </tfoot>
             </table>
@@ -222,15 +209,15 @@
 
             <div class="section-title">แนบเอกสารหลักฐาน</div>
             <div class="upload-buttons-container">
-                <label class="file-upload-btn" onclick="document.getElementById('fileInvoice').click()">
+                <label class="file-upload-btn">
                     <span>📎 แนบใบเสนอราคา</span>
                     <input type="file" id="fileInvoice">
                 </label>
-                <label class="file-upload-btn" onclick="document.getElementById('fileReceipt').click()">
+                <label class="file-upload-btn">
                     <span>📎 แนบใบเสร็จ</span>
                     <input type="file" id="fileReceipt">
                 </label>
-                <label class="file-upload-btn" onclick="document.getElementById('fileSlip').click()">
+                <label class="file-upload-btn">
                     <span>📎 แนบหลักฐานการโอน</span>
                     <input type="file" id="fileSlip">
                 </label>
@@ -242,6 +229,28 @@
     </div>
 
     <script>
+        // --- FIREBASE CONFIGURATION ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAe-g9p74z_hpVzLJdGuMkmCKYtPABFJp0",
+            authDomain: "project-requests-c1c9c.firebaseapp.com",
+            projectId: "project-requests-c1c9c",
+            storageBucket: "project-requests-c1c9c.firebasestorage.app",
+            messagingSenderId: "890731674962",
+            appId: "1:890731674962:web:bf1466d56848f67339ce8b"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+
+        let allRequests = [];
+
+        // โหลดข้อมูลเมื่อเปิดหน้าเว็บ
+        window.onload = function() {
+            fetchRequests();
+        };
+
         function openModal() { document.getElementById('requestModal').style.display = 'block'; }
         function closeModal() { document.getElementById('requestModal').style.display = 'none'; }
         
@@ -250,7 +259,6 @@
             const vol = parseFloat(row.querySelector('.vol').value) || 0;
             const price = parseFloat(row.querySelector('.price').value) || 0;
             row.querySelector('.total').value = '฿' + (vol * price).toLocaleString(undefined, {minimumFractionDigits: 2});
-            updateTotalSum();
         }
 
         function addItem() {
@@ -267,25 +275,163 @@
             container.appendChild(div);
         }
 
-        function removeItem(btn) { btn.closest('.items-row').remove(); updateTotalSum(); }
+        function removeItem(btn) { btn.closest('.items-row').remove(); }
 
-        function updateTotalSum() {
-            // Placeholder for sum logic
+        // ดึงข้อมูลจาก Firestore
+        function fetchRequests() {
+            db.collection("project_requests").orderBy("createdAt", "desc").onSnapshot((snapshot) => {
+                allRequests = [];
+                snapshot.forEach((doc) => {
+                    allRequests.push({ id: doc.id, ...doc.data() });
+                });
+                renderTable(allRequests);
+                updateMetrics(allRequests);
+            });
         }
 
-        function saveRequest() {
-            // Simplified save logic
-            alert('บันทึกสำเร็จ');
-            closeModal();
+        // แสดงผลตาราง
+        function renderTable(data) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            let grandTotal = 0;
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: #94a3b8;">ยังไม่มีข้อมูลใบขอซื้อ</td></tr>`;
+                document.getElementById('totalAmountCell').innerText = '฿0.00';
+                document.getElementById('tableCountText').innerText = '0 shown of 0 total';
+                return;
+            }
+
+            data.forEach(req => {
+                if (req.items && req.items.length > 0) {
+                    req.items.forEach((item, index) => {
+                        const rowTotal = (item.vol || 0) * (item.price || 0);
+                        grandTotal += rowTotal;
+
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            ${index === 0 ? `<td rowspan="${req.items.length}"><strong>${req.prNo || '-'}</strong></td>` : ''}
+                            ${index === 0 ? `<td rowspan="${req.items.length}">${req.store || '-'}</td>` : ''}
+                            ${index === 0 ? `<td rowspan="${req.items.length}">${req.supplier || '-'}</td>` : ''}
+                            <td><strong>${item.desc || '-'}</strong></td>
+                            <td>${req.code || '6030012'}</td>
+                            <td>${req.codeName || '-'}</td>
+                            <td>${item.vol || 0}</td>
+                            <td>฿${(item.price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                            <td><strong>฿${rowTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong></td>
+                            ${index === 0 ? `<td rowspan="${req.items.length}"><span class="badge">รออนุมัติ</span></td>` : ''}
+                            ${index === 0 ? `<td rowspan="${req.items.length}"><div class="action-btns"><button class="btn-action" onclick="deleteRequest('${req.id}')">Delete</button></div></td>` : ''}
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            });
+
+            document.getElementById('totalAmountCell').innerText = '฿' + grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById('tableCountText').innerText = `${data.length} shown of ${data.length} total`;
         }
 
-        function updateCodeValue() {
-             // Logic remains similar
+        // อัปเดตการแสดงผล Summary Metrics
+        function updateMetrics(data) {
+            let totalAmount = 0;
+            let suppliersSet = new Set();
+            let storesSet = new Set();
+
+            data.forEach(req => {
+                if(req.supplier) suppliersSet.add(req.supplier);
+                if(req.store) storesSet.add(req.store);
+                if(req.items) {
+                    req.items.forEach(item => {
+                        totalAmount += (item.vol || 0) * (item.price || 0);
+                    });
+                }
+            });
+
+            document.getElementById('metricRequests').innerText = data.length;
+            document.getElementById('metricAmount').innerText = '฿' + totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById('metricSuppliers').innerText = suppliersSet.size;
+            document.getElementById('metricCompanies').innerText = storesSet.size;
+            document.getElementById('metricPending').innerText = '฿' + totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById('metricPendingCount').innerText = data.length;
         }
 
+        // บันทึกข้อมูลลง Firestore
+        async function saveRequest() {
+            const prNo = document.getElementById('modalPrNo').value;
+            const supplier = document.getElementById('modalSupplier').value;
+            const store = document.getElementById('modalStore').value;
+            const codeName = document.getElementById('modalCodeName').value;
+
+            if (!supplier) {
+                alert('กรุณากรอกชื่อ Supplier');
+                return;
+            }
+
+            let items = [];
+            const itemRows = document.querySelectorAll('.items-row');
+            itemRows.forEach(row => {
+                const desc = row.querySelector('.desc').value;
+                const vol = parseFloat(row.querySelector('.vol').value) || 0;
+                const price = parseFloat(row.querySelector('.price').value) || 0;
+                items.push({ desc, vol, price });
+            });
+
+            try {
+                await db.collection("project_requests").add({
+                    prNo,
+                    supplier,
+                    store,
+                    codeName,
+                    code: "6030012",
+                    items,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                alert('บันทึกข้อมูลสำเร็จ!');
+                closeModal();
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+            }
+        }
+
+        // ลบข้อมูลรายรายการ
+        async function deleteRequest(id) {
+            if (confirm('คุณต้องการลบรายการนี้ใช่หรือไม่?')) {
+                try {
+                    await db.collection("project_requests").doc(id).delete();
+                } catch (error) {
+                    console.error("Error removing document: ", error);
+                }
+            }
+        }
+
+        // ล้างข้อมูลทั้งหมด
+        async function clearAllRequests() {
+            if (confirm('คุณต้องการลบข้อมูลใบขอซื้อทั้งหมดใช่หรือไม่?')) {
+                const snapshot = await db.collection("project_requests").get();
+                const batch = db.batch();
+                snapshot.docs.forEach((doc) => {
+                    batch.delete(doc.ref);
+                });
+                await batch.commit();
+                alert('ลบข้อมูลทั้งหมดเรียบร้อยแล้ว');
+            }
+        }
+
+        // ค้นหาข้อมูลในตาราง
         function searchTable() {
-            // Logic remains similar
+            const input = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allRequests.filter(req => {
+                return (req.prNo && req.prNo.toLowerCase().includes(input)) ||
+                       (req.supplier && req.supplier.toLowerCase().includes(input)) ||
+                       (req.store && req.store.toLowerCase().includes(input)) ||
+                       (req.codeName && req.codeName.toLowerCase().includes(input));
+            });
+            renderTable(filtered);
         }
+
+        function updateCodeValue() {}
     </script>
 </body>
 </html>
