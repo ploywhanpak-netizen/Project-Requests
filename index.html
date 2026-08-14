@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>Projects Requests - Budget Breakdown View</title>
+    <title>Projects Requests - Budget Breakdown View & Reports</title>
     <!-- Firebase App (Core) SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <!-- Firebase Firestore SDK -->
@@ -12,33 +12,43 @@
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; color: #1e293b; margin: 0; padding: 30px; }
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; color: #1e293b; margin: 0; padding: 0; display: flex; min-height: 100vh; }
+        
+        /* Sidebar Styles */
+        .sidebar { width: 260px; background-color: #ffffff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; flex-shrink: 0; }
+        .sidebar-brand { font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 30px; padding-left: 10px; }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+        .sidebar-menu li a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; color: #64748b; text-decoration: none; font-size: 14px; font-weight: 500; border-radius: 6px; transition: all 0.2s; cursor: pointer; }
+        .sidebar-menu li a:hover, .sidebar-menu li.active a { background-color: #f1f5f9; color: #0f172a; font-weight: 600; }
+
+        /* Main Content Layout */
+        .main-content { flex: 1; padding: 30px; box-sizing: border-box; overflow-y: auto; }
         .container { max-width: 1400px; margin: auto; }
         
-        /* Header section */
+        .view-section { display: none; }
+        .view-section.active { display: block; }
+
         .header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
         h1 { margin: 0; font-size: 24px; color: #0f172a; font-weight: 700; }
         .subtitle { color: #64748b; font-size: 13px; margin-top: 4px; }
         
-        .actions-bar { display: flex; gap: 10px; align-items: center; }
-        .btn-clear { background: #fff; border: 1px solid #cbd5e1; color: #dc2626; padding: 8px 14px; border-radius: 6px; font-weight: 500; font-size: 13px; cursor: pointer; }
-        .btn-csv { background: #fff; border: 1px solid #cbd5e1; color: #334155; padding: 8px 14px; border-radius: 6px; font-weight: 500; font-size: 13px; cursor: pointer; }
+        .actions-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .btn-export-import { background: #fff; border: 1px solid #cbd5e1; color: #0f172a; padding: 8px 14px; border-radius: 6px; font-weight: 500; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
         .btn-add { background: #0f172a; color: white; border: none; padding: 9px 16px; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
 
-        /* Search input */
         .search-box { margin-bottom: 20px; }
         .search-box input { width: 300px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; background: #fff; }
 
-        /* Metrics cards */
         .metrics-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; margin-bottom: 30px; }
         .metric-card { background: #ffffff; padding: 18px; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
         .metric-title { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 6px; }
         .metric-value { font-size: 22px; font-weight: 700; color: #0f172a; }
         .metric-value.orange { color: #d97706; }
+        .metric-value.green { color: #10b981; }
+        .metric-value.red { color: #ef4444; }
         .metric-sub { font-size: 12px; color: #64748b; margin-top: 4px; }
 
-        /* Table Card */
-        .table-card { background: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+        .table-card { background: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.02); margin-bottom: 30px; }
         .table-header-info { padding: 16px 20px; font-size: 14px; font-weight: 600; color: #0f172a; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
         .table-header-info span { font-weight: normal; color: #64748b; font-size: 12px; }
 
@@ -47,14 +57,26 @@
         td { padding: 14px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; vertical-align: middle; }
         tr:hover td { background-color: #f8fafc; }
 
-        .badge { background: #fef3c7; color: #b45309; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-block; }
-        .action-btns { display: flex; gap: 6px; }
-        .btn-action { background: #f1f5f9; border: 1px solid #e2e8f0; padding: 4px 10px; border-radius: 4px; font-size: 12px; color: #475569; cursor: pointer; }
+        .badge { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-block; cursor: pointer; border: none; }
+        .badge.pending { background: #fef3c7; color: #b45309; }
+        .badge.approved { background: #d1fae5; color: #065f46; }
+        .badge.rejected { background: #fee2e2; color: #991b1b; }
+
+        .action-btns { display: flex; gap: 6px; align-items: center; }
+        .btn-action { background: #f1f5f9; border: 1px solid #e2e8f0; padding: 4px 10px; border-radius: 4px; font-size: 12px; color: #475569; cursor: pointer; display: flex; align-items: center; gap: 4px; text-decoration: none; }
         .btn-action:hover { background: #e2e8f0; }
+        .btn-action.delete { color: #dc2626; }
+        .btn-action.print-row { color: #0284c7; background: #e0f2fe; border-color: #bae6fd; }
+        .btn-action.print-row:hover { background: #bae6fd; }
 
         .total-row td { font-weight: 700; color: #0f172a; background: #fafafa; border-top: 2px solid #e2e8f0; }
 
-        /* Modal Styles */
+        /* Report Filter Bar */
+        .report-filter-bar { display: flex; gap: 15px; align-items: center; background: #ffffff; padding: 15px 20px; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 20px; }
+        .report-filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .report-filter-group label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; }
+        .report-filter-group select { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; background: #fff; min-width: 150px; }
+
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); overflow-y: auto; }
         .modal-content { background-color: #fff; margin: 3% auto; padding: 30px; border-radius: 12px; width: 85%; max-width: 1000px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
@@ -65,103 +87,360 @@
         .modal-content label { font-size: 13px; font-weight: 600; color: #475569; }
         .modal-content input, .modal-content select, .modal-content textarea { padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; font-family: 'Inter', sans-serif; }
         
-        /* New Dynamic Item Styles */
         .items-container { margin: 15px 0; }
         .items-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 10px; align-items: end; margin-bottom: 10px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; }
         .btn-add-item { background: #10b981; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; margin-top: 10px; }
         .btn-remove-item { background: #ef4444; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; }
         
         .section-title { font-size: 15px; font-weight: 700; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-top: 20px; margin-bottom: 10px; }
-        
         .btn-submit-modal { background: #0f172a; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px; }
-        
-        /* File Upload Buttons Style */
-        .upload-buttons-container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 10px; }
-        .file-upload-btn { border: 1px dashed #cbd5e1; background: #f8fafc; border-radius: 6px; padding: 12px; text-align: center; cursor: pointer; font-size: 12px; font-weight: 600; color: #475569; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s; }
-        .file-upload-btn:hover { border-color: #0f172a; background: #f1f5f9; color: #0f172a; }
-        .file-upload-btn input { display: none; }
+        .inline-add { display: flex; gap: 6px; }
+        .inline-add input { flex: 1; }
+        .btn-inline { background: #334155; color: white; border: none; padding: 0 12px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+
+        .upload-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 10px; }
+        .upload-box { background: #f8fafc; border: 1px dashed #cbd5e1; padding: 12px; border-radius: 8px; display: flex; flex-direction: column; gap: 6px; }
+        .upload-box label { font-size: 12px; font-weight: 600; color: #333155; }
+        .upload-box input[type="file"] { font-size: 11px; }
+
+        /* Print Specific Styles - Optimized to 1 Page A4 */
+        #printSection { display: none; }
+
+        @media print {
+            @page {
+                size: A4;
+                margin: 10mm 12mm;
+            }
+            body { 
+                background-color: #ffffff; 
+                padding: 0; 
+                color: #111; 
+                font-size: 11px; 
+                line-height: 1.35;
+                display: block;
+            }
+            .sidebar, .container, .modal { display: none !important; }
+            #printSection { display: block !important; width: 100%; box-sizing: border-box; }
+            
+            .print-top-bar { border-bottom: 2px solid #0f172a; padding-bottom: 6px; margin-bottom: 10px; }
+            .print-title { font-size: 18px; font-weight: 700; color: #0f172a; margin: 0; letter-spacing: -0.5px; }
+            
+            .print-meta-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 6px 24px; margin-bottom: 12px; font-size: 11px; }
+            .print-meta-row { display: flex; justify-content: space-between; border-bottom: 1px dotted #cbd5e1; padding-bottom: 3px; }
+            .print-meta-row span:first-child { font-weight: 600; color: #475569; min-width: 100px; }
+            .print-meta-row span:last-child { text-align: right; color: #0f172a; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+            .print-section-header { font-weight: 700; font-size: 12px; color: #0f172a; margin-top: 14px; margin-bottom: 4px; border-bottom: 1.5px solid #0f172a; padding-bottom: 2px; }
+            
+            .print-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+            .print-table th, .print-table td { border: 1px solid #cbd5e1; padding: 5px 8px; font-size: 10.5px; text-align: left; }
+            .print-table th { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; font-weight: 700; color: #0f172a; }
+            .print-table td.num, .print-table th.num { text-align: right; }
+            .print-table td.center, .print-table th.center { text-align: center; }
+
+            .print-remarks { margin-top: 8px; font-size: 10.5px; border-bottom: 1px dotted #cbd5e1; padding-bottom: 6px; color: #334155; }
+            .print-link { margin-top: 8px; font-size: 10.5px; border-bottom: 1px dotted #cbd5e1; padding-bottom: 6px; color: #334155; }
+
+            .print-signatures { display: flex; justify-content: space-around; margin-top: 30px; page-break-inside: avoid; }
+            .signature-box { text-align: center; width: 230px; border: 1px solid #cbd5e1; padding: 12px 10px; border-radius: 6px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+            .signature-title { font-weight: 700; font-size: 12px; color: #0f172a; margin-bottom: 28px; }
+            .signature-line { border-bottom: 1px dotted #94a3b8; margin-bottom: 6px; }
+            .signature-label { font-size: 11px; color: #1e293b; font-weight: 600; }
+            .signature-date { font-size: 10px; color: #64748b; margin-top: 4px; }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header-row">
+
+    <!-- Sidebar Menu -->
+    <div class="sidebar">
+        <div class="sidebar-brand">Bloom Management</div>
+        <ul class="sidebar-menu">
+            <li id="menuProjects" class="active"><a onclick="switchView('projects')">📋 Projects Requests</a></li>
+            <li id="menuReport"><a onclick="switchView('report')">📊 หน้ารายงาน (Reports)</a></li>
+            <li id="menuStores"><a onclick="switchView('stores')">🏬 จัดการ Store</a></li>
+            <li><a href="#">⚙️ ตั้งค่า</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+        <div class="container">
+
+            <!-- VIEW 1: PROJECTS REQUESTS -->
+            <div id="viewProjects" class="view-section active">
+                <div class="header-row">
+                    <div>
+                        <h1>Projects Requests</h1>
+                        <div class="subtitle">Track purchase requests, suppliers, invoices, receipts and payment evidence.</div>
+                    </div>
+                    <div class="actions-bar">
+                        <button class="btn-export-import" onclick="exportData()">📥 Export JSON</button>
+                        <button class="btn-export-import" onclick="document.getElementById('importFile').click()">📤 Import JSON</button>
+                        <input type="file" id="importFile" style="display: none;" accept=".json" onchange="importData(event)">
+                        <button class="btn-add" onclick="openModal()">+ Add request</button>
+                    </div>
+                </div>
+
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="PR, store, supplier, company..." onkeyup="searchTable()">
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-title">Requests</div>
+                        <div class="metric-value" id="metricRequests">0</div>
+                        <div class="metric-sub">Approval rows</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-title">Amount</div>
+                        <div class="metric-value orange" id="metricAmount">฿0.00</div>
+                        <div class="metric-sub">Total requested</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-title">Suppliers</div>
+                        <div class="metric-value" id="metricSuppliers">0</div>
+                        <div class="metric-sub">Unique suppliers</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-title">Companies</div>
+                        <div class="metric-value" id="metricCompanies">0</div>
+                        <div class="metric-sub">Unique companies</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-title">รออนุมัติ</div>
+                        <div class="metric-value orange" id="metricPending">฿0.00</div>
+                        <div class="metric-sub"><span id="metricPendingCount">0</span> requests</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-title">อนุมัติแล้ว</div>
+                        <div class="metric-value green" id="metricApproved">฿0.00</div>
+                        <div class="metric-sub"><span id="metricApprovedCount">0</span> requests</div>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-header-info">
+                        Budget Breakdown & Projects Requests <span id="tableCountText">0 shown of 0 total</span>
+                    </div>
+                    <table id="requestTable">
+                        <thead>
+                            <tr>
+                                <th>PR NO.</th>
+                                <th>STORE</th>
+                                <th>SUPPLIER</th>
+                                <th>PROJECT NAME</th>
+                                <th>CODE NAME</th>
+                                <th>VOL</th>
+                                <th>PRICE/UNIT</th>
+                                <th>TOTAL</th>
+                                <th>สถานะ (คลิกเปลี่ยน)</th>
+                                <th>ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <tr><td colspan="10" style="text-align: center; color: #94a3b8;">กำลังโหลดข้อมูล...</td></tr>
+                        </tbody>
+                        <tfoot>
+                            <tr class="total-row">
+                                <td colspan="7" style="text-align: right;">Total</td>
+                                <td colspan="3" id="totalAmountCell">฿0.00</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW 2: REPORTS -->
+            <div id="viewReport" class="view-section">
+                <div class="header-row">
+                    <div>
+                        <h1>รายงานสรุปค่าใช้จ่าย (Approved Reports)</h1>
+                        <div class="subtitle">แสดงเฉพาะรายการที่ได้รับการอนุมัติแล้ว แยกตามเดือน/ปี แผนก และประเภทการใช้จ่าย</div>
+                    </div>
+                </div>
+
+                <!-- Filter Bar -->
+                <div class="report-filter-bar">
+                    <div class="report-filter-group">
+                        <label>เลือกปี (Year)</label>
+                        <select id="reportFilterYear" onchange="renderReports()">
+                            <option value="all">ทุกปี</option>
+                        </select>
+                    </div>
+                    <div class="report-filter-group">
+                        <label>เลือกเดือน (Month)</label>
+                        <select id="reportFilterMonth" onchange="renderReports()">
+                            <option value="all">ทุกเดือน</option>
+                            <option value="01">January (01)</option>
+                            <option value="02">February (02)</option>
+                            <option value="03">March (03)</option>
+                            <option value="04">April (04)</option>
+                            <option value="05">May (05)</option>
+                            <option value="06">June (06)</option>
+                            <option value="07">July (07)</option>
+                            <option value="08">August (08)</option>
+                            <option value="09">September (09)</option>
+                            <option value="10">October (10)</option>
+                            <option value="11">November (11)</option>
+                            <option value="12">December (12)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Summary Metrics for Approved -->
+                <div class="metrics-grid" style="grid-template-columns: repeat(3, 1fr);">
+                    <div class="metric-card">
+                        <div class="metric-title">รายการที่อนุมัติแล้วทั้งหมด</div>
+                        <div class="metric-value green" id="reportMetricCount">0 รายการ</div>
+                        <div class="metric-sub">ตามเงื่อนไขตัวกรอง</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-title">ยอดเงินรวมสุทธิ (Approved Budget)</div>
+                        <div class="metric-value green" id="reportMetricTotal">฿0.00</div>
+                        <div class="metric-sub">ยอดเบิกจ่ายอนุมัติรวม</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-title">จำนวนแผนกที่มีการเบิก</div>
+                        <div class="metric-value" id="reportMetricDepts">0 แผนก</div>
+                        <div class="metric-sub">แผนกที่มีค่าใช้จ่าย</div>
+                    </div>
+                </div>
+
+                <!-- Table 1: Breakdown by Department -->
+                <div class="table-card">
+                    <div class="table-header-info">
+                        📁 สรุปยอดใช้จ่ายแยกตาม "แผนก" (By Department)
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>แผนก (Department)</th>
+                                <th style="text-align: right;">จำนวนรายการ</th>
+                                <th style="text-align: right;">ยอดรวมสุทธิ (บาท)</th>
+                                <th style="text-align: right;">สัดส่วน (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportDeptTableBody">
+                            <tr><td colspan="4" style="text-align: center; color: #94a3b8;">ไม่มีข้อมูล</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Table 2: Breakdown by Expense Category / Code Name -->
+                <div class="table-card">
+                    <div class="table-header-info">
+                        🏷️ สรุปยอดใช้จ่ายแยกตาม "ประเภทการใช้จ่าย / Code Name" (By Expense Category)
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ประเภทการใช้จ่าย (Code Name)</th>
+                                <th style="text-align: right;">จำนวนรายการ</th>
+                                <th style="text-align: right;">ยอดรวมสุทธิ (บาท)</th>
+                                <th style="text-align: right;">สัดส่วน (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportCategoryTableBody">
+                            <tr><td colspan="4" style="text-align: center; color: #94a3b8;">ไม่มีข้อมูล</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW 3: STORES MANAGEMENT -->
+            <div id="viewStores" class="view-section">
+                <div class="header-row">
+                    <div>
+                        <h1>จัดการ Store</h1>
+                        <div class="subtitle">เพิ่ม แก้ไข และลบรายชื่อ Store ที่ใช้งานในระบบ</div>
+                    </div>
+                    <div class="actions-bar">
+                        <button class="btn-add" onclick="addNewStorePrompt()">+ เพิ่ม Store ใหม่</button>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-header-info">
+                        รายชื่อ Store ทั้งหมด
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ลำดับ</th>
+                                <th>ชื่อ Store</th>
+                                <th style="text-align: right;">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="storeTableBody">
+                            <tr><td colspan="3" style="text-align: center; color: #94a3b8;">กำลังโหลดข้อมูล...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Hidden Printable Layout Area -->
+    <div id="printSection">
+        <div class="print-top-bar">
+            <div class="print-title">Project Requisition Form</div>
+        </div>
+        
+        <div class="print-meta-grid">
             <div>
-                <h1>Projects Requests</h1>
-                <div class="subtitle">Track purchase requests, suppliers, invoices, receipts and payment evidence.</div>
+                <div class="print-meta-row"><span>Project No.</span> <span id="printPrNo">-</span></div>
+                <div class="print-meta-row"><span>Request Date</span> <span id="printDate">-</span></div>
+                <div class="print-meta-row"><span>Issued by</span> <span id="printIssuedBy">Tienthong</span></div>
+                <div class="print-meta-row"><span>Department</span> <span id="printDepartment">-</span></div>
+                <div class="print-meta-row"><span>Supplier Name</span> <span id="printSupplier">-</span></div>
             </div>
-            <div class="actions-bar">
-                <button class="btn-clear" onclick="clearAllRequests()">Clear Projects Requests</button>
-                <button class="btn-add" onclick="openModal()">+ Add request</button>
-            </div>
-        </div>
-
-        <div class="search-box">
-            <input type="text" id="searchInput" placeholder="PR, store, supplier, company..." onkeyup="searchTable()">
-        </div>
-
-        <div class="metrics-grid">
-            <div class="metric-card">
-                <div class="metric-title">Requests</div>
-                <div class="metric-value" id="metricRequests">0</div>
-                <div class="metric-sub">Approval rows</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-title">Amount</div>
-                <div class="metric-value orange" id="metricAmount">฿0.00</div>
-                <div class="metric-sub">Total requested</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-title">Suppliers</div>
-                <div class="metric-value" id="metricSuppliers">0</div>
-                <div class="metric-sub">Unique suppliers</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-title">Companies</div>
-                <div class="metric-value" id="metricCompanies">0</div>
-                <div class="metric-sub">Unique companies</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-title">รออนุมัติ</div>
-                <div class="metric-value orange" id="metricPending">฿0.00</div>
-                <div class="metric-sub"><span id="metricPendingCount">0</span> requests</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-title">ไม่อนุมัติ</div>
-                <div class="metric-value" id="metricRejected">฿0.00</div>
-                <div class="metric-sub">0 requests</div>
+            <div>
+                <div class="print-meta-row"><span>Project Name</span> <span id="printProjectName">-</span></div>
+                <div class="print-meta-row"><span>Project Duration</span> <span id="printDuration">-</span></div>
+                <div class="print-meta-row"><span>Venue/Placement</span> <span id="printStoreVenue">Office</span></div>
+                <div class="print-meta-row"><span>Ref. No.</span> <span>-</span></div>
+                <div class="print-meta-row"><span>Store</span> <span id="printStore">-</span></div>
             </div>
         </div>
 
-        <div class="table-card">
-            <div class="table-header-info">
-                Budget Breakdown & Projects Requests <span id="tableCountText">0 shown of 0 total</span>
+        <div class="print-section-header">Budget Breakdown</div>
+        <table class="print-table">
+            <thead>
+                <tr>
+                    <th class="center" style="width: 35px;">No.</th>
+                    <th>Description</th>
+                    <th style="width: 110px;">Code Name</th>
+                    <th class="num" style="width: 50px;">Volume</th>
+                    <th class="num" style="width: 85px;">Price / Unit</th>
+                    <th class="num" style="width: 90px;">Total</th>
+                </tr>
+            </thead>
+            <tbody id="printTableBody"></tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="5" style="text-align: right; font-weight: bold;">Total</td>
+                    <td class="num" id="printGrandTotal" style="font-weight: bold;">฿0.00</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div class="print-link">
+            <strong>Link / Quotation:</strong> <span id="printQuotationLink">-</span>
+        </div>
+
+        <div class="print-remarks">
+            <strong>Payment Info & Remarks:</strong> <span id="printRemarks">-</span>
+        </div>
+
+        <div class="print-signatures">
+            <div class="signature-box" style="margin: auto;">
+                <div class="signature-title">Requested by</div>
+                <div class="signature-line"></div>
+                <div class="signature-label" id="printRequesterName">(Tienthong Riencharoen)</div>
+                <div class="signature-date">Date: _____ / _____ / ________</div>
             </div>
-            <table id="requestTable">
-                <thead>
-                    <tr>
-                        <th>PR NO.</th>
-                        <th>STORE</th>
-                        <th>SUPPLIER</th>
-                        <th>DESCRIPTION / DETAILS</th>
-                        <th>CODE</th>
-                        <th>CODE NAME</th>
-                        <th>VOL</th>
-                        <th>PRICE/UNIT</th>
-                        <th>TOTAL</th>
-                        <th>ลายเซ็น</th>
-                        <th>ACTIONS</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody">
-                    <!-- ข้อมูลจะถูกโหลดจาก Firebase อัตโนมัติ -->
-                </tbody>
-                <tfoot>
-                    <tr class="total-row">
-                        <td colspan="8" style="text-align: right;">Total</td>
-                        <td colspan="3" id="totalAmountCell">฿0.00</td>
-                    </tr>
-                </tfoot>
-            </table>
         </div>
     </div>
 
@@ -169,29 +448,61 @@
     <div id="requestModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>สร้างใบคำขออนุมัติ & Budget Breakdown</h2>
+                <h2 id="modalTitle">สร้างใบคำขออนุมัติ & Budget Breakdown</h2>
                 <span class="close" onclick="closeModal()">&times;</span>
             </div>
+            <input type="hidden" id="editingId" value="">
             <div class="form-grid">
                 <div class="form-group"><label>PR NO.</label><input type="text" id="modalPrNo" value="MK2026-023"></div>
+                <div class="form-group"><label>Project Name</label><input type="text" id="modalProjectName" placeholder="กรอกชื่อโครงการ"></div>
                 <div class="form-group"><label>SUPPLIER</label><input type="text" id="modalSupplier" placeholder="กรอกชื่อบริษัท / ชื่อผู้ขาย"></div>
                 <div class="form-group">
                     <label>STORE</label>
-                    <select id="modalStore">
-                        <option value="Bloom">Bloom</option>
-                        <option value="Pancake">Pancake</option>
-                        <option value="Office">Office</option>
+                    <div class="inline-add">
+                        <select id="modalStore" style="flex: 1;"></select>
+                        <button type="button" class="btn-inline" onclick="addNewStorePromptModal()">+ เพิ่ม Store</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>แผนก (Department)</label>
+                    <div class="inline-add">
+                        <select id="modalDepartment" style="flex: 1;"></select>
+                        <button type="button" class="btn-inline" onclick="addNewDepartment()">+ เพิ่มแผนก</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>ประเภทค่าใช้จ่าย (Code Name)</label>
+                    <div class="inline-add">
+                        <select id="modalCodeName" style="flex: 1;"></select>
+                        <button type="button" class="btn-inline" onclick="addNewCategory()">+ เพิ่มประเภท</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>ผู้ขออนุมัติ (Requested by)</label>
+                    <input type="text" id="modalRequestedBy" value="Tienthong Riencharoen">
+                </div>
+                <div class="form-group">
+                    <label>วันที่ขออนุมัติ (Request Date)</label>
+                    <input type="date" id="modalRequestDate">
+                </div>
+                <div class="form-group">
+                    <label>Project Duration (ระยะเวลาโครงการ)</label>
+                    <input type="text" id="modalDuration" placeholder="เช่น Jul-2026 หรือ 1-15 สิงหาคม 2026">
+                </div>
+            </div>
+
+            <div class="section-title">ประเภทการชำระเงิน & หมายเหตุ</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>ประเภทการชำระเงิน</label>
+                    <select id="modalPayType" onchange="togglePayCondition()">
+                        <option value="เต็มจำนวน">ชำระเต็มจำนวน</option>
+                        <option value="มีเงื่อนไข 50%">มีเงื่อนไข 50% (มัดจำ / งวด)</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>ประเภทค่าใช้จ่าย</label>
-                    <select id="modalCodeName" onchange="updateCodeValue()">
-                        <option value="อุปกรณ์สำนักงาน">อุปกรณ์สำนักงาน</option>
-                        <option value="ส่งเสริมการขาย">ส่งเสริมการขาย</option>
-                        <option value="POP & POSM">POP & POSM</option>
-                        <option value="Influencer">Influencer</option>
-                        <option value="อื่นๆ">อื่นๆ</option>
-                    </select>
+                    <label>หมายเหตุเงื่อนไข / โน้ตการจ่ายเงิน</label>
+                    <input type="text" id="modalPayNote" placeholder="เช่น มัดจำ 50% ก่อนเริ่มงาน / จ่ายส่วนที่เหลือวันส่งมอบ">
                 </div>
             </div>
 
@@ -207,29 +518,21 @@
             </div>
             <button class="btn-add-item" onclick="addItem()">+ เพิ่มรายการ</button>
 
-            <div class="section-title">แนบเอกสารหลักฐาน</div>
-            <div class="upload-buttons-container">
-                <label class="file-upload-btn">
-                    <span>📎 แนบใบเสนอราคา</span>
-                    <input type="file" id="fileInvoice">
-                </label>
-                <label class="file-upload-btn">
-                    <span>📎 แนบใบเสร็จ</span>
-                    <input type="file" id="fileReceipt">
-                </label>
-                <label class="file-upload-btn">
-                    <span>📎 แนบหลักฐานการโอน</span>
-                    <input type="file" id="fileSlip">
-                </label>
+            <div class="section-title">แนบใบเสนอราคา (Quotation)</div>
+            <div class="upload-grid">
+                <div class="upload-box">
+                    <label>📄 ใบเสนอราคา (Quotation)</label>
+                    <input type="file" id="fileQuotation">
+                </div>
             </div>
+
             <div style="margin-top: 25px; text-align: right;">
-                <button class="btn-submit-modal" onclick="saveRequest()">บันทึกข้อมูล</button>
+                <button class="btn-submit-modal" onclick="saveRequest()" id="btnSubmit">บันทึกข้อมูล</button>
             </div>
         </div>
     </div>
 
     <script>
-        // --- FIREBASE CONFIGURATION ---
         const firebaseConfig = {
             apiKey: "AIzaSyAe-g9p74z_hpVzLJdGuMkmCKYtPABFJp0",
             authDomain: "project-requests-c1c9c.firebaseapp.com",
@@ -239,21 +542,313 @@
             appId: "1:890731674962:web:bf1466d56848f67339ce8b"
         };
 
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const storage = firebase.storage();
 
         let allRequests = [];
+        let expenseCategories = [
+            "อุปกรณ์สำนักงาน",
+            "ส่งเสริมการขาย",
+            "POP & POSM",
+            "Influencer",
+            "อื่นๆ"
+        ];
+        let departments = [
+            "Marketing",
+            "Operations",
+            "Administration",
+            "Finance"
+        ];
+        let stores = [
+            "Bloom",
+            "Pancake",
+            "Office"
+        ];
 
-        // โหลดข้อมูลเมื่อเปิดหน้าเว็บ
         window.onload = function() {
+            fetchSettings();
             fetchRequests();
         };
 
-        function openModal() { document.getElementById('requestModal').style.display = 'block'; }
+        function switchView(viewName) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.sidebar-menu li').forEach(el => el.classList.remove('active'));
+
+            if (viewName === 'projects') {
+                document.getElementById('viewProjects').classList.add('active');
+                document.getElementById('menuProjects').classList.add('active');
+            } else if (viewName === 'report') {
+                document.getElementById('viewReport').classList.add('active');
+                document.getElementById('menuReport').classList.add('active');
+                populateYearFilter();
+                renderReports();
+            } else if (viewName === 'stores') {
+                document.getElementById('viewStores').classList.add('active');
+                document.getElementById('menuStores').classList.add('active');
+                renderStoresTable();
+            }
+        }
+
+        function getTodayDateString() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function formatDateToCustomString(dateString) {
+            if (!dateString) return '-';
+            const dateObj = new Date(dateString);
+            if (isNaN(dateObj)) return dateString;
+            
+            const day = dateObj.getDate();
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const monthStr = months[dateObj.getMonth()];
+            const year = dateObj.getFullYear();
+            
+            return `${day} ${monthStr} ${year}`;
+        }
+
+        function openModal(editId = null) {
+            document.getElementById('requestModal').style.display = 'block';
+            if (!editId) {
+                document.getElementById('modalTitle').innerText = 'สร้างใบคำขออนุมัติ & Budget Breakdown';
+                document.getElementById('editingId').value = '';
+                document.getElementById('modalPrNo').value = 'MK2026-023';
+                document.getElementById('modalProjectName').value = '';
+                document.getElementById('modalSupplier').value = '';
+                document.getElementById('modalStore').value = stores[0] || 'Bloom';
+                document.getElementById('modalDepartment').value = departments[0];
+                document.getElementById('modalRequestedBy').value = 'Tienthong Riencharoen';
+                document.getElementById('modalRequestDate').value = getTodayDateString();
+                document.getElementById('modalDuration').value = 'Jul-2026';
+                document.getElementById('modalPayType').value = 'เต็มจำนวน';
+                document.getElementById('modalPayNote').value = '';
+                document.getElementById('fileQuotation').value = '';
+                
+                const container = document.getElementById('itemsContainer');
+                container.innerHTML = `
+                    <div class="items-row">
+                        <div class="form-group"><label>Description</label><input type="text" class="desc" placeholder="ชื่อรายการ"></div>
+                        <div class="form-group"><label>Volume</label><input type="number" class="vol" value="1" oninput="calculateRow(this)"></div>
+                        <div class="form-group"><label>Price / Unit</label><input type="number" class="price" value="0" oninput="calculateRow(this)"></div>
+                        <div class="form-group"><label>Total</label><input type="text" class="total" value="฿0.00" readonly></div>
+                        <button class="btn-remove-item" onclick="removeItem(this)">ลบ</button>
+                    </div>
+                `;
+            }
+        }
+
         function closeModal() { document.getElementById('requestModal').style.display = 'none'; }
         
+        function togglePayCondition() {
+            const val = document.getElementById('modalPayType').value;
+            const noteInput = document.getElementById('modalPayNote');
+            if(val === 'มีเงื่อนไข 50%') {
+                if(!noteInput.value) noteInput.value = 'มัดจำ 50% / งวดที่เหลือ 50%';
+            }
+        }
+
+        async function fetchSettings() {
+            try {
+                const catDoc = await db.collection("settings").doc("expense_categories").get();
+                if (catDoc.exists && catDoc.data().categories) {
+                    expenseCategories = catDoc.data().categories;
+                } else {
+                    await db.collection("settings").doc("expense_categories").set({ categories: expenseCategories });
+                }
+
+                const deptDoc = await db.collection("settings").doc("departments").get();
+                if (deptDoc.exists && deptDoc.data().departments) {
+                    departments = deptDoc.data().departments;
+                } else {
+                    await db.collection("settings").doc("departments").set({ departments: departments });
+                }
+
+                const storeDoc = await db.collection("settings").doc("stores").get();
+                if (storeDoc.exists && storeDoc.data().stores) {
+                    stores = storeDoc.data().stores;
+                } else {
+                    await db.collection("settings").doc("stores").set({ stores: stores });
+                }
+
+                renderDropdowns();
+            } catch (error) {
+                console.error("Error fetching settings: ", error);
+                renderDropdowns();
+            }
+        }
+
+        function renderDropdowns() {
+            const catSelect = document.getElementById('modalCodeName');
+            const currentCat = catSelect.value;
+            catSelect.innerHTML = '';
+            expenseCategories.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                catSelect.appendChild(opt);
+            });
+            if (expenseCategories.includes(currentCat)) catSelect.value = currentCat;
+
+            const deptSelect = document.getElementById('modalDepartment');
+            const currentDept = deptSelect.value;
+            deptSelect.innerHTML = '';
+            departments.forEach(dept => {
+                const opt = document.createElement('option');
+                opt.value = dept;
+                opt.textContent = dept;
+                deptSelect.appendChild(opt);
+            });
+            if (departments.includes(currentDept)) deptSelect.value = currentDept;
+
+            const storeSelect = document.getElementById('modalStore');
+            const currentStore = storeSelect.value;
+            storeSelect.innerHTML = '';
+            stores.forEach(st => {
+                const opt = document.createElement('option');
+                opt.value = st;
+                opt.textContent = st;
+                storeSelect.appendChild(opt);
+            });
+            if (stores.includes(currentStore)) storeSelect.value = currentStore;
+        }
+
+        async function addNewCategory() {
+            const newCat = prompt("กรอกชื่อประเภทค่าใช้จ่ายใหม่:");
+            if (newCat && newCat.trim() !== "") {
+                const trimmed = newCat.trim();
+                if (!expenseCategories.includes(trimmed)) {
+                    expenseCategories.push(trimmed);
+                    try {
+                        await db.collection("settings").doc("expense_categories").set({ categories: expenseCategories });
+                        renderDropdowns();
+                        document.getElementById('modalCodeName').value = trimmed;
+                    } catch (error) {
+                        console.error("Error saving category: ", error);
+                    }
+                } else {
+                    document.getElementById('modalCodeName').value = trimmed;
+                }
+            }
+        }
+
+        async function addNewDepartment() {
+            const newDept = prompt("กรอกชื่อแผนกใหม่:");
+            if (newDept && newDept.trim() !== "") {
+                const trimmed = newDept.trim();
+                if (!departments.includes(trimmed)) {
+                    departments.push(trimmed);
+                    try {
+                        await db.collection("settings").doc("departments").set({ departments: departments });
+                        renderDropdowns();
+                        document.getElementById('modalDepartment').value = trimmed;
+                    } catch (error) {
+                        console.error("Error saving department: ", error);
+                    }
+                } else {
+                    document.getElementById('modalDepartment').value = trimmed;
+                }
+            }
+        }
+
+        async function addNewStorePromptModal() {
+            const newStore = prompt("กรอกชื่อ Store ใหม่:");
+            if (newStore && newStore.trim() !== "") {
+                const trimmed = newStore.trim();
+                if (!stores.includes(trimmed)) {
+                    stores.push(trimmed);
+                    try {
+                        await db.collection("settings").doc("stores").set({ stores: stores });
+                        renderDropdowns();
+                        document.getElementById('modalStore').value = trimmed;
+                    } catch (error) {
+                        console.error("Error saving store: ", error);
+                    }
+                } else {
+                    document.getElementById('modalStore').value = trimmed;
+                }
+            }
+        }
+
+        async function addNewStorePrompt() {
+            const newStore = prompt("กรอกชื่อ Store ใหม่:");
+            if (newStore && newStore.trim() !== "") {
+                const trimmed = newStore.trim();
+                if (!stores.includes(trimmed)) {
+                    stores.push(trimmed);
+                    try {
+                        await db.collection("settings").doc("stores").set({ stores: stores });
+                        renderDropdowns();
+                        renderStoresTable();
+                    } catch (error) {
+                        console.error("Error saving store: ", error);
+                    }
+                } else {
+                    alert("Store นี้มีอยู่แล้ว");
+                }
+            }
+        }
+
+        function renderStoresTable() {
+            const tbody = document.getElementById('storeTableBody');
+            tbody.innerHTML = '';
+            if (stores.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #94a3b8;">ไม่มีข้อมูล Store</td></tr>`;
+                return;
+            }
+            stores.forEach((st, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td><strong>${st}</strong></td>
+                    <td style="text-align: right;">
+                        <div class="action-btns" style="justify-content: flex-end;">
+                            <button class="btn-action" onclick="editStore(${index})">✏️ แก้ไข</button>
+                            <button class="btn-action delete" onclick="deleteStore(${index})">Delete</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function editStore(index) {
+            const oldName = stores[index];
+            const newName = prompt("แก้ไขชื่อ Store:", oldName);
+            if (newName && newName.trim() !== "" && newName.trim() !== oldName) {
+                const trimmed = newName.trim();
+                if (stores.includes(trimmed)) {
+                    alert("มีชื่อ Store นี้อยู่แล้ว");
+                    return;
+                }
+                stores[index] = trimmed;
+                try {
+                    await db.collection("settings").doc("stores").set({ stores: stores });
+                    renderDropdowns();
+                    renderStoresTable();
+                } catch (error) {
+                    console.error("Error updating store: ", error);
+                }
+            }
+        }
+
+        async function deleteStore(index) {
+            const storeName = stores[index];
+            if (confirm(`คุณต้องการลบ Store "${storeName}" ใช่หรือไม่?`)) {
+                stores.splice(index, 1);
+                try {
+                    await db.collection("settings").doc("stores").set({ stores: stores });
+                    renderDropdowns();
+                    renderStoresTable();
+                } catch (error) {
+                    console.error("Error deleting store: ", error);
+                }
+            }
+        }
+
         function calculateRow(input) {
             const row = input.closest('.items-row');
             const vol = parseFloat(row.querySelector('.vol').value) || 0;
@@ -261,15 +856,15 @@
             row.querySelector('.total').value = '฿' + (vol * price).toLocaleString(undefined, {minimumFractionDigits: 2});
         }
 
-        function addItem() {
+        function addItem(desc = '', vol = 1, price = 0) {
             const container = document.getElementById('itemsContainer');
             const div = document.createElement('div');
             div.className = 'items-row';
             div.innerHTML = `
-                <div class="form-group"><label>Description</label><input type="text" class="desc" placeholder="ชื่อรายการ"></div>
-                <div class="form-group"><label>Volume</label><input type="number" class="vol" value="1" oninput="calculateRow(this)"></div>
-                <div class="form-group"><label>Price / Unit</label><input type="number" class="price" value="0" oninput="calculateRow(this)"></div>
-                <div class="form-group"><label>Total</label><input type="text" class="total" value="฿0.00" readonly></div>
+                <div class="form-group"><label>Description</label><input type="text" class="desc" placeholder="ชื่อรายการ" value="${desc}"></div>
+                <div class="form-group"><label>Volume</label><input type="number" class="vol" value="${vol}" oninput="calculateRow(this)"></div>
+                <div class="form-group"><label>Price / Unit</label><input type="number" class="price" value="${price}" oninput="calculateRow(this)"></div>
+                <div class="form-group"><label>Total</label><input type="text" class="total" value="฿${(vol * price).toLocaleString(undefined, {minimumFractionDigits: 2})}" readonly></div>
                 <button class="btn-remove-item" onclick="removeItem(this)">ลบ</button>
             `;
             container.appendChild(div);
@@ -277,7 +872,6 @@
 
         function removeItem(btn) { btn.closest('.items-row').remove(); }
 
-        // ดึงข้อมูลจาก Firestore
         function fetchRequests() {
             db.collection("project_requests").orderBy("createdAt", "desc").onSnapshot((snapshot) => {
                 allRequests = [];
@@ -286,17 +880,22 @@
                 });
                 renderTable(allRequests);
                 updateMetrics(allRequests);
+                if(document.getElementById('viewReport').classList.contains('active')) {
+                    populateYearFilter();
+                    renderReports();
+                }
+            }, (error) => {
+                console.error("Firestore Error: ", error);
             });
         }
 
-        // แสดงผลตาราง
         function renderTable(data) {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
             let grandTotal = 0;
 
             if (data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: #94a3b8;">ยังไม่มีข้อมูลใบขอซื้อ</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: #94a3b8;">ยังไม่มีข้อมูลใบขอซื้อ</td></tr>`;
                 document.getElementById('totalAmountCell').innerText = '฿0.00';
                 document.getElementById('tableCountText').innerText = '0 shown of 0 total';
                 return;
@@ -304,46 +903,282 @@
 
             data.forEach(req => {
                 if (req.items && req.items.length > 0) {
-                    req.items.forEach((item, index) => {
-                        const rowTotal = (item.vol || 0) * (item.price || 0);
-                        grandTotal += rowTotal;
+                    const status = req.status || 'รออนุมัติ';
+                    let badgeClass = 'pending';
+                    if (status === 'อนุมัติแล้ว') badgeClass = 'approved';
+                    if (status === 'ไม่อนุมัติ') badgeClass = 'rejected';
 
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            ${index === 0 ? `<td rowspan="${req.items.length}"><strong>${req.prNo || '-'}</strong></td>` : ''}
-                            ${index === 0 ? `<td rowspan="${req.items.length}">${req.store || '-'}</td>` : ''}
-                            ${index === 0 ? `<td rowspan="${req.items.length}">${req.supplier || '-'}</td>` : ''}
-                            <td><strong>${item.desc || '-'}</strong></td>
-                            <td>${req.code || '6030012'}</td>
-                            <td>${req.codeName || '-'}</td>
-                            <td>${item.vol || 0}</td>
-                            <td>฿${(item.price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                            <td><strong>฿${rowTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong></td>
-                            ${index === 0 ? `<td rowspan="${req.items.length}"><span class="badge">รออนุมัติ</span></td>` : ''}
-                            ${index === 0 ? `<td rowspan="${req.items.length}"><div class="action-btns"><button class="btn-action" onclick="deleteRequest('${req.id}')">Delete</button></div></td>` : ''}
-                        `;
-                        tbody.appendChild(tr);
+                    let reqTotalSum = 0;
+                    let totalVol = 0;
+                    req.items.forEach(i => {
+                        totalVol += (i.vol || 0);
+                        reqTotalSum += (i.vol || 0) * (i.price || 0);
                     });
+                    grandTotal += reqTotalSum;
+
+                    const projectNameText = (req.projectName && req.projectName.trim() !== "") ? req.projectName : '-';
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${req.prNo || '-'}</strong></td>
+                        <td>${req.store || '-'}</td>
+                        <td>${req.supplier || '-'}</td>
+                        <td><strong>${projectNameText}</strong></td>
+                        <td>${req.codeName || '-'}</td>
+                        <td>${totalVol}</td>
+                        <td>-</td>
+                        <td><strong>฿${reqTotalSum.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong></td>
+                        <td><button class="badge ${badgeClass}" onclick="toggleStatus('${req.id}', '${status}')" title="คลิกเพื่อเปลี่ยนสถานะ">${status}</button></td>
+                        <td>
+                            <div class="action-btns">
+                                <button class="btn-action print-row" onclick="printSingleReport('${req.id}')" title="พิมพ์ใบขออนุมัติ">🖨️</button>
+                                <button class="btn-action" onclick="editRequest('${req.id}')" title="แก้ไขรายการ">✏️</button>
+                                <button class="btn-action delete" onclick="deleteRequest('${req.id}')" title="ลบรายการ">Delete</button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
                 }
             });
 
-            document.getElementById('totalAmountCell').innerText = '฿' + grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2});
+            const formattedTotal = '฿' + grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById('totalAmountCell').innerText = formattedTotal;
             document.getElementById('tableCountText').innerText = `${data.length} shown of ${data.length} total`;
         }
 
-        // อัปเดตการแสดงผล Summary Metrics
+        function populateYearFilter() {
+            const yearSelect = document.getElementById('reportFilterYear');
+            const currentSelectedYear = yearSelect.value;
+            
+            let yearsSet = new Set();
+            allRequests.forEach(req => {
+                if (req.requestDate) {
+                    const year = req.requestDate.split('-')[0];
+                    if (year) yearsSet.add(year);
+                }
+            });
+
+            yearSelect.innerHTML = '<option value="all">ทุกปี</option>';
+            Array.from(yearsSet).sort().reverse().forEach(year => {
+                const opt = document.createElement('option');
+                opt.value = year;
+                opt.textContent = year;
+                yearSelect.appendChild(opt);
+            });
+
+            if (Array.from(yearsSet).includes(currentSelectedYear)) {
+                yearSelect.value = currentSelectedYear;
+            }
+        }
+
+        function renderReports() {
+            const selectedYear = document.getElementById('reportFilterYear').value;
+            const selectedMonth = document.getElementById('reportFilterMonth').value;
+
+            const approvedRequests = allRequests.filter(req => {
+                if ((req.status || 'รออนุมัติ') !== 'อนุมัติแล้ว') return false;
+                if (!req.requestDate) return false;
+
+                const [year, month, day] = req.requestDate.split('-');
+                if (selectedYear !== 'all' && year !== selectedYear) return false;
+                if (selectedMonth !== 'all' && month !== selectedMonth) return false;
+
+                return true;
+            });
+
+            let totalApprovedAmount = 0;
+            let deptSummary = {};
+            let categorySummary = {};
+
+            approvedRequests.forEach(req => {
+                const dept = req.department || 'ไม่ระบุแผนก';
+                const cat = req.codeName || 'ไม่ระบุประเภท';
+
+                let reqTotal = 0;
+                if (req.items) {
+                    req.items.forEach(item => {
+                        reqTotal += (item.vol || 0) * (item.price || 0);
+                    });
+                }
+
+                totalApprovedAmount += reqTotal;
+
+                if (!deptSummary[dept]) deptSummary[dept] = { count: 0, total: 0 };
+                deptSummary[dept].count += 1;
+                deptSummary[dept].total += reqTotal;
+
+                if (!categorySummary[cat]) categorySummary[cat] = { count: 0, total: 0 };
+                categorySummary[cat].count += 1;
+                categorySummary[cat].total += reqTotal;
+            });
+
+            document.getElementById('reportMetricCount').innerText = `${approvedRequests.length} รายการ`;
+            document.getElementById('reportMetricTotal').innerText = '฿' + totalApprovedAmount.toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById('reportMetricDepts').innerText = `${Object.keys(deptSummary).length} แผนก`;
+
+            const deptTbody = document.getElementById('reportDeptTableBody');
+            deptTbody.innerHTML = '';
+            if (Object.keys(deptSummary).length === 0) {
+                deptTbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #94a3b8;">ไม่มีข้อมูลตามเงื่อนไขที่เลือก</td></tr>`;
+            } else {
+                for (const [dept, data] of Object.entries(deptSummary)) {
+                    const percentage = totalApprovedAmount > 0 ? ((data.total / totalApprovedAmount) * 100).toFixed(1) : 0;
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${dept}</strong></td>
+                        <td style="text-align: right;">${data.count}</td>
+                        <td style="text-align: right;"><strong>฿${data.total.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong></td>
+                        <td style="text-align: right;">${percentage}%</td>
+                    `;
+                    deptTbody.appendChild(tr);
+                }
+            }
+
+            const catTbody = document.getElementById('reportCategoryTableBody');
+            catTbody.innerHTML = '';
+            if (Object.keys(categorySummary).length === 0) {
+                catTbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #94a3b8;">ไม่มีข้อมูลตามเงื่อนไขที่เลือก</td></tr>`;
+            } else {
+                for (const [cat, data] of Object.entries(categorySummary)) {
+                    const percentage = totalApprovedAmount > 0 ? ((data.total / totalApprovedAmount) * 100).toFixed(1) : 0;
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${cat}</strong></td>
+                        <td style="text-align: right;">${data.count}</td>
+                        <td style="text-align: right;"><strong>฿${data.total.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong></td>
+                        <td style="text-align: right;">${percentage}%</td>
+                    `;
+                    catTbody.appendChild(tr);
+                }
+            }
+        }
+
+        function printSingleReport(id) {
+            const req = allRequests.find(r => r.id === id);
+            if (!req) return;
+
+            document.getElementById('printDate').innerText = formatDateToCustomString(req.requestDate);
+            document.getElementById('printPrNo').innerText = req.prNo || '-';
+            document.getElementById('printStore').innerText = req.store || '-';
+            document.getElementById('printStoreVenue').innerText = req.store || 'Office';
+            document.getElementById('printSupplier').innerText = req.supplier || '-';
+            document.getElementById('printDepartment').innerText = req.department || '-';
+            document.getElementById('printDuration').innerText = req.duration || '-';
+            document.getElementById('printProjectName').innerText = req.projectName || '-';
+            
+            let remarksText = `ประเภทการชำระเงิน: ${req.payType || 'เต็มจำนวน'}`;
+            if(req.payNote) remarksText += ` | หมายเหตุ: ${req.payNote}`;
+            document.getElementById('printRemarks').innerText = remarksText;
+
+            const requester = req.requestedBy || 'Tienthong Riencharoen';
+            document.getElementById('printIssuedBy').innerText = requester.split(' ')[0];
+            document.getElementById('printRequesterName').innerText = `(${requester})`;
+
+            const linkSpan = document.getElementById('printQuotationLink');
+            if (req.quotationUrl) {
+                linkSpan.innerHTML = `<a href="${req.quotationUrl}" target="_blank">${req.quotationUrl}</a>`;
+            } else {
+                linkSpan.innerText = '-';
+            }
+
+            const printTbody = document.getElementById('printTableBody');
+            printTbody.innerHTML = '';
+            let singleTotal = 0;
+
+            if (req.items && req.items.length > 0) {
+                req.items.forEach((item, idx) => {
+                    const rowTotal = (item.vol || 0) * (item.price || 0);
+                    singleTotal += rowTotal;
+                    const ptr = document.createElement('tr');
+                    ptr.innerHTML = `
+                        <td class="center">${idx + 1}</td>
+                        <td>${item.desc || '-'}</td>
+                        <td>${req.codeName || '-'}</td>
+                        <td class="num">${item.vol || 0}</td>
+                        <td class="num">฿${(item.price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                        <td class="num"><strong>฿${rowTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong></td>
+                    `;
+                    printTbody.appendChild(ptr);
+                });
+            }
+
+            document.getElementById('printGrandTotal').innerText = '฿' + singleTotal.toLocaleString(undefined, {minimumFractionDigits: 2});
+            window.print();
+        }
+
+        function editRequest(id) {
+            const req = allRequests.find(r => r.id === id);
+            if (!req) return;
+
+            openModal(id);
+            document.getElementById('modalTitle').innerText = 'แก้ไขใบคำขออนุมัติ & Budget Breakdown';
+            document.getElementById('editingId').value = req.id;
+            document.getElementById('modalPrNo').value = req.prNo || '';
+            document.getElementById('modalProjectName').value = req.projectName || '';
+            document.getElementById('modalSupplier').value = req.supplier || '';
+            document.getElementById('modalStore').value = req.store || stores[0];
+            document.getElementById('modalDepartment').value = req.department || departments[0];
+            document.getElementById('modalCodeName').value = req.codeName || expenseCategories[0];
+            document.getElementById('modalRequestedBy').value = req.requestedBy || 'Tienthong Riencharoen';
+            document.getElementById('modalRequestDate').value = req.requestDate || getTodayDateString();
+            document.getElementById('modalDuration').value = req.duration || 'Jul-2026';
+            document.getElementById('modalPayType').value = req.payType || 'เต็มจำนวน';
+            document.getElementById('modalPayNote').value = req.payNote || '';
+
+            const container = document.getElementById('itemsContainer');
+            container.innerHTML = '';
+            if (req.items && req.items.length > 0) {
+                req.items.forEach(item => {
+                    addItem(item.desc, item.vol, item.price);
+                });
+            } else {
+                addItem();
+            }
+        }
+
+        async function toggleStatus(id, currentStatus) {
+            let nextStatus = 'รออนุมัติ';
+            if (currentStatus === 'รออนุมัติ') nextStatus = 'อนุมัติแล้ว';
+            else if (currentStatus === 'อนุมัติแล้ว') nextStatus = 'ไม่อนุมัติ';
+            else if (currentStatus === 'ไม่อนุมัติ') nextStatus = 'รออนุมัติ';
+
+            try {
+                await db.collection("project_requests").doc(id).update({
+                    status: nextStatus
+                });
+            } catch (error) {
+                console.error("Error updating status: ", error);
+            }
+        }
+
         function updateMetrics(data) {
             let totalAmount = 0;
+            let pendingAmount = 0;
+            let approvedAmount = 0;
+            let pendingCount = 0;
+            let approvedCount = 0;
             let suppliersSet = new Set();
             let storesSet = new Set();
 
             data.forEach(req => {
                 if(req.supplier) suppliersSet.add(req.supplier);
                 if(req.store) storesSet.add(req.store);
+                
+                let reqTotal = 0;
                 if(req.items) {
                     req.items.forEach(item => {
-                        totalAmount += (item.vol || 0) * (item.price || 0);
+                        reqTotal += (item.vol || 0) * (item.price || 0);
                     });
+                }
+
+                totalAmount += reqTotal;
+                const status = req.status || 'รออนุมัติ';
+                if (status === 'อนุมัติแล้ว') {
+                    approvedAmount += reqTotal;
+                    approvedCount++;
+                } else if (status === 'รออนุมัติ') {
+                    pendingAmount += reqTotal;
+                    pendingCount++;
                 }
             });
 
@@ -351,51 +1186,93 @@
             document.getElementById('metricAmount').innerText = '฿' + totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2});
             document.getElementById('metricSuppliers').innerText = suppliersSet.size;
             document.getElementById('metricCompanies').innerText = storesSet.size;
-            document.getElementById('metricPending').innerText = '฿' + totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2});
-            document.getElementById('metricPendingCount').innerText = data.length;
+            document.getElementById('metricPending').innerText = '฿' + pendingAmount.toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById('metricPendingCount').innerText = pendingCount;
+            document.getElementById('metricApproved').innerText = '฿' + approvedAmount.toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById('metricApprovedCount').innerText = approvedCount;
         }
 
-        // บันทึกข้อมูลลง Firestore
         async function saveRequest() {
-            const prNo = document.getElementById('modalPrNo').value;
-            const supplier = document.getElementById('modalSupplier').value;
-            const store = document.getElementById('modalStore').value;
-            const codeName = document.getElementById('modalCodeName').value;
-
-            if (!supplier) {
-                alert('กรุณากรอกชื่อ Supplier');
-                return;
-            }
-
-            let items = [];
-            const itemRows = document.querySelectorAll('.items-row');
-            itemRows.forEach(row => {
-                const desc = row.querySelector('.desc').value;
-                const vol = parseFloat(row.querySelector('.vol').value) || 0;
-                const price = parseFloat(row.querySelector('.price').value) || 0;
-                items.push({ desc, vol, price });
-            });
+            const submitBtn = document.getElementById('btnSubmit');
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'กำลังอัปโหลดและบันทึก...';
 
             try {
-                await db.collection("project_requests").add({
-                    prNo,
-                    supplier,
-                    store,
-                    codeName,
-                    code: "6030012",
-                    items,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                const editingId = document.getElementById('editingId').value;
+                const prNo = document.getElementById('modalPrNo').value;
+                const projectName = document.getElementById('modalProjectName').value;
+                const supplier = document.getElementById('modalSupplier').value;
+                const store = document.getElementById('modalStore').value;
+                const department = document.getElementById('modalDepartment').value;
+                const codeName = document.getElementById('modalCodeName').value;
+                const requestedBy = document.getElementById('modalRequestedBy').value;
+                const requestDate = document.getElementById('modalRequestDate').value;
+                const duration = document.getElementById('modalDuration').value;
+                const payType = document.getElementById('modalPayType').value;
+                const payNote = document.getElementById('modalPayNote').value;
+
+                if (!supplier) {
+                    alert('กรุณากรอกชื่อ Supplier');
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'บันทึกข้อมูล';
+                    return;
+                }
+
+                let items = [];
+                const itemRows = document.querySelectorAll('.items-row');
+                itemRows.forEach(row => {
+                    const desc = row.querySelector('.desc').value;
+                    const vol = parseFloat(row.querySelector('.vol').value) || 0;
+                    const price = parseFloat(row.querySelector('.price').value) || 0;
+                    items.push({ desc, vol, price });
                 });
 
-                alert('บันทึกข้อมูลสำเร็จ!');
+                let quotationUrl = null;
+                const fileInput = document.getElementById('fileQuotation');
+                if (fileInput.files[0]) {
+                    const file = fileInput.files[0];
+                    const storageRef = storage.ref();
+                    const fileRef = storageRef.child(`documents/quotation_${Date.now()}_${file.name}`);
+                    const snapshot = await fileRef.put(file);
+                    quotationUrl = await snapshot.ref.getDownloadURL();
+                } else if (editingId) {
+                    const existing = allRequests.find(r => r.id === editingId);
+                    if (existing) quotationUrl = existing.quotationUrl || null;
+                }
+
+                const dataToSave = {
+                    prNo,
+                    projectName,
+                    supplier,
+                    store,
+                    department,
+                    codeName,
+                    requestedBy,
+                    requestDate,
+                    duration,
+                    payType,
+                    payNote,
+                    items,
+                    quotationUrl
+                };
+
+                if (editingId) {
+                    await db.collection("project_requests").doc(editingId).update(dataToSave);
+                } else {
+                    dataToSave.status = "รออนุมัติ";
+                    dataToSave.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                    await db.collection("project_requests").add(dataToSave);
+                }
+
                 closeModal();
             } catch (error) {
-                console.error("Error adding document: ", error);
-                alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+                console.error("Error saving document: ", error);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'บันทึกข้อมูล';
             }
         }
 
-        // ลบข้อมูลรายรายการ
         async function deleteRequest(id) {
             if (confirm('คุณต้องการลบรายการนี้ใช่หรือไม่?')) {
                 try {
@@ -406,32 +1283,66 @@
             }
         }
 
-        // ล้างข้อมูลทั้งหมด
-        async function clearAllRequests() {
-            if (confirm('คุณต้องการลบข้อมูลใบขอซื้อทั้งหมดใช่หรือไม่?')) {
-                const snapshot = await db.collection("project_requests").get();
-                const batch = db.batch();
-                snapshot.docs.forEach((doc) => {
-                    batch.delete(doc.ref);
-                });
-                await batch.commit();
-                alert('ลบข้อมูลทั้งหมดเรียบร้อยแล้ว');
-            }
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allRequests, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `project_requests_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
         }
 
-        // ค้นหาข้อมูลในตาราง
+        async function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (!Array.isArray(importedData)) {
+                        alert('รูปแบบไฟล์ไม่ถูกต้อง');
+                        return;
+                    }
+
+                    if (confirm(`พบข้อมูล ${importedData.length} รายการ ต้องการนำเข้าและเพิ่มลงในฐานข้อมูลใช่หรือไม่?`)) {
+                        const batch = db.batch();
+                        importedData.forEach(item => {
+                            const newDocRef = db.collection("project_requests").doc();
+                            delete item.id;
+                            if (!item.createdAt) {
+                                item.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                            }
+                            batch.set(newDocRef, item);
+                        });
+                        await batch.commit();
+                    }
+                } catch (err) {
+                    console.error("Import error: ", err);
+                    alert('เกิดข้อผิดพลาดในการอ่านไฟล์ JSON');
+                }
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
         function searchTable() {
             const input = document.getElementById('searchInput').value.toLowerCase();
             const filtered = allRequests.filter(req => {
                 return (req.prNo && req.prNo.toLowerCase().includes(input)) ||
+                       (req.projectName && req.projectName.toLowerCase().includes(input)) ||
                        (req.supplier && req.supplier.toLowerCase().includes(input)) ||
                        (req.store && req.store.toLowerCase().includes(input)) ||
-                       (req.codeName && req.codeName.toLowerCase().includes(input));
+                       (req.department && req.department.toLowerCase().includes(input)) ||
+                       (req.codeName && req.codeName.toLowerCase().includes(input)) ||
+                       (req.requestDate && req.requestDate.toLowerCase().includes(input)) ||
+                       (req.duration && req.duration.toLowerCase().includes(input)) ||
+                       (req.payType && req.payType.toLowerCase().includes(input)) ||
+                       (req.requestedBy && req.requestedBy.toLowerCase().includes(input));
             });
             renderTable(filtered);
         }
-
-        function updateCodeValue() {}
     </script>
 </body>
 </html>
