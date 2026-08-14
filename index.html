@@ -468,7 +468,7 @@
                         <button type="button" class="btn-inline" onclick="addNewDepartment()">+ เพิ่มแผนก</button>
                     </div>
                 </div>
-                <div class="form-group" style="display:none;">
+                <div class="form-group">
                     <label>ประเภทค่าใช้จ่าย</label>
                     <div class="inline-add">
                         <select id="modalCodeName" style="flex: 1;"></select>
@@ -901,7 +901,6 @@
                 return;
             }
 
-            // คำนวณยอดรวมของแต่ละรายการเก็บไว้ เพื่อใช้ในการเรียงลำดับ
             const processedData = data.map(req => {
                 let reqTotalSum = 0;
                 let totalVol = 0;
@@ -914,17 +913,14 @@
                 return { ...req, reqTotalSum, totalVol };
             });
 
-            // จัดเรียงข้อมูล: 
-            // 1. รายการที่ยังไม่อนุมัติ (ไม่ใช่ "อนุมัติแล้ว") ขึ้นก่อน, รายการที่ "อนุมัติแล้ว" ไปไว้ด้านล่าง
-            // 2. หากสถานะเหมือนกัน ให้เรียงจากยอดเงินรวม (reqTotalSum) น้อยไปหามาก
             processedData.sort((a, b) => {
                 const aIsApproved = (a.status || 'รออนุมัติ') === 'อนุมัติแล้ว';
                 const bIsApproved = (b.status || 'รออนุมัติ') === 'อนุมัติแล้ว';
 
                 if (aIsApproved !== bIsApproved) {
-                    return aIsApproved ? 1 : -1; // อนุมัติแล้วไปล่าง
+                    return aIsApproved ? 1 : -1;
                 }
-                return a.reqTotalSum - b.reqTotalSum; // เรียงจากน้อยไปมาก
+                return a.reqTotalSum - b.reqTotalSum;
             });
 
             processedData.forEach(req => {
@@ -1353,6 +1349,7 @@
                        (req.supplier && req.supplier.toLowerCase().includes(input)) ||
                        (req.store && req.store.toLowerCase().includes(input)) ||
                        (req.department && req.department.toLowerCase().includes(input)) ||
+                       (req.codeName && req.codeName.toLowerCase().includes(input)) ||
                        (req.requestDate && req.requestDate.toLowerCase().includes(input)) ||
                        (req.duration && req.duration.toLowerCase().includes(input)) ||
                        (req.payType && req.payType.toLowerCase().includes(input)) ||
