@@ -901,20 +901,40 @@
                 return;
             }
 
-            data.forEach(req => {
+            // คำนวณยอดรวมของแต่ละรายการเก็บไว้ เพื่อใช้ในการเรียงลำดับ
+            const processedData = data.map(req => {
+                let reqTotalSum = 0;
+                let totalVol = 0;
+                if (req.items) {
+                    req.items.forEach(i => {
+                        totalVol += (i.vol || 0);
+                        reqTotalSum += (i.vol || 0) * (i.price || 0);
+                    });
+                }
+                return { ...req, reqTotalSum, totalVol };
+            });
+
+            // จัดเรียงข้อมูล: 
+            // 1. รายการที่ยังไม่อนุมัติ (ไม่ใช่ "อนุมัติแล้ว") ขึ้นก่อน, รายการที่ "อนุมัติแล้ว" ไปไว้ด้านล่าง
+            // 2. หากสถานะเหมือนกัน ให้เรียงจากยอดเงินรวม (reqTotalSum) น้อยไปหามาก
+            processedData.sort((a, b) => {
+                const aIsApproved = (a.status || 'รออนุมัติ') === 'อนุมัติแล้ว';
+                const bIsApproved = (b.status || 'รออนุมัติ') === 'อนุมัติแล้ว';
+
+                if (aIsApproved !== bIsApproved) {
+                    return aIsApproved ? 1 : -1; // อนุมัติแล้วไปล่าง
+                }
+                return a.reqTotalSum - b.reqTotalSum; // เรียงจากน้อยไปมาก
+            });
+
+            processedData.forEach(req => {
                 if (req.items && req.items.length > 0) {
                     const status = req.status || 'รออนุมัติ';
                     let badgeClass = 'pending';
                     if (status === 'อนุมัติแล้ว') badgeClass = 'approved';
                     if (status === 'ไม่อนุมัติ') badgeClass = 'rejected';
 
-                    let reqTotalSum = 0;
-                    let totalVol = 0;
-                    req.items.forEach(i => {
-                        totalVol += (i.vol || 0);
-                        reqTotalSum += (i.vol || 0) * (i.price || 0);
-                    });
-                    grandTotal += reqTotalSum;
+                    grandTotal += req.reqTotalSum;
 
                     const projectNameText = (req.projectName && req.projectName.trim() !== "") ? req.projectName : '-';
 
@@ -924,9 +944,9 @@
                         <td style="font-size: 11px; padding: 10px 10px;">${req.store || '-'}</td>
                         <td style="font-size: 11px; padding: 10px 10px;">${req.supplier || '-'}</td>
                         <td style="font-size: 11px; padding: 10px 10px;"><strong>${projectNameText}</strong></td>
-                        <td style="font-size: 11px; padding: 10px 10px;">${totalVol}</td>
+                        <td style="font-size: 11px; padding: 10px 10px;">${req.totalVol}</td>
                         <td style="font-size: 11px; padding: 10px 10px;">-</td>
-                        <td style="font-size: 11px; padding: 10px 10px;"><strong>฿${reqTotalSum.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong></td>
+                        <td style="font-size: 11px; padding: 10px 10px;"><strong>฿${req.reqTotalSum.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong></td>
                         <td style="font-size: 11px; padding: 10px 10px;"><button class="badge ${badgeClass}" onclick="toggleStatus('${req.id}', '${status}')" title="คลิกเพื่อเปลี่ยนสถานะ">${status}</button></td>
                         <td style="font-size: 11px; padding: 10px 10px;">
                             <div class="action-btns">
